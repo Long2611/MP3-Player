@@ -38,6 +38,7 @@ public class UI extends JFrame {
     private PlaybackMode currentMode = PlaybackMode.NORMAL;
 
     private ImageIcon resizeImage(String filePath, int width, int height) {
+        /// Resize the image to the specified width and height to fit the button.
         try {
             ImageIcon originalIcon = new ImageIcon(getClass().getResource(filePath));
             Image originalImage = originalIcon.getImage();
