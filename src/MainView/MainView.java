@@ -207,8 +207,25 @@ public class MainView extends JFrame {
             e.printStackTrace();
         }
     }
+    
+    private List<File> collectMP3Files(File directory) {
+        List<File> mp3Files = new ArrayList<>();
+        File[] files = directory.listFiles();
 
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    mp3Files.addAll(collectMP3Files(file)); // Recursive call
+                } else if (file.getName().toLowerCase().endsWith(".mp3")) {
+                    mp3Files.add(file);
+                }
+            }
+        }
 
+        return mp3Files;
+    }
+    
+    
     private void changePlaylist(ActionEvent event) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -217,8 +234,8 @@ public class MainView extends JFrame {
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedDirectory = fileChooser.getSelectedFile();
             if (selectedDirectory != null) {
-                File[] files = selectedDirectory.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp3"));
-                if (files != null && files.length > 0) {
+                List<File> files = collectMP3Files(selectedDirectory);
+                if (!files.isEmpty()) {
                     DatabaseManager dbManager = DatabaseManager.getInstance();
                     for (File file : files) {
                         dbManager.addSong(file.getAbsolutePath());
@@ -230,6 +247,7 @@ public class MainView extends JFrame {
             }
         }
     }
+
 
 
     private void updatePlaylistFromDatabase() {
