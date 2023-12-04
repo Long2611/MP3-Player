@@ -45,7 +45,7 @@ public class MainView extends JFrame {
         timer.start();
 
         // Swing components
-        playButton = new JButton("▶");
+        playButton = new JButton("");
         nextButton = new JButton("Next");
         prevButton = new JButton("Previous");
         changePlaylistButton = new JButton("Change Playlist");
@@ -68,8 +68,8 @@ public class MainView extends JFrame {
         nextButton.addActionListener(e -> mediaPlayerController.playNextSong());
         prevButton.addActionListener(e -> mediaPlayerController.playPreviousSong());
         changePlaylistButton.addActionListener(this::changePlaylist);
-        repeatButton.addActionListener(e -> mediaPlayerController.toggleRepeatMode());
-        shuffleButton.addActionListener(e -> mediaPlayerController.toggleShuffleMode());
+        repeatButton.addActionListener(e -> toggleRepeat());
+        shuffleButton.addActionListener(e -> toggleShuffle());
 
         scrubBar.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
@@ -125,6 +125,33 @@ public class MainView extends JFrame {
         
         updatePlaylistFromDatabase();
     }
+    
+    private void toggleShuffle() {
+        mediaPlayerController.toggleShuffleMode();
+        if (mediaPlayerController.getCurrentMode() == MediaPlayerController.PlaybackMode.SHUFFLE) {
+            shuffleButton.setBackground(Color.BLUE);
+            shuffleButton.setForeground(Color.WHITE); // Set text color to white for better visibility
+            repeatButton.setBackground(null); // Reset repeat button color
+            repeatButton.setForeground(null); // Reset text color
+        } else {
+            shuffleButton.setBackground(null);
+            shuffleButton.setForeground(null);
+        }
+    }
+
+    private void toggleRepeat() {
+        mediaPlayerController.toggleRepeatMode();
+        if (mediaPlayerController.getCurrentMode() == MediaPlayerController.PlaybackMode.REPEAT) {
+            repeatButton.setBackground(Color.BLUE);
+            repeatButton.setForeground(Color.WHITE); // Set text color to white for better visibility
+            shuffleButton.setBackground(null); // Reset shuffle button color
+            shuffleButton.setForeground(null); // Reset text color
+        } else {
+            repeatButton.setBackground(null);
+            repeatButton.setForeground(null);
+        }
+    }
+
 
     private void initUI() {
         // Set up the JFrame

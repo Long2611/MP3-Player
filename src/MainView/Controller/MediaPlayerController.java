@@ -16,7 +16,7 @@ public class MediaPlayerController {
     private int currentSongIndex = -1;
     private PlaybackMode currentMode = PlaybackMode.NORMAL;
     
-    private enum PlaybackMode {NORMAL, REPEAT, SHUFFLE}
+    public enum PlaybackMode {NORMAL, REPEAT, SHUFFLE}
     
     public interface SongPlaybackListener {
         void onSongChanged(String songName, Duration totalDuration);
