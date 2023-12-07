@@ -33,24 +33,13 @@ public class DatabaseManager {
         return instance;
     }
 
-    private void initializeDatabase() {
+    protected void initializeDatabase() {
         try (Statement statement = connection.createStatement()) {
             // Create Songs table
             statement.execute("CREATE TABLE IF NOT EXISTS Songs (" +
                               "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                               "path TEXT NOT NULL UNIQUE);");
 
-            // Create Playlists table
-            statement.execute("CREATE TABLE IF NOT EXISTS Playlists (" +
-                              "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                              "name TEXT NOT NULL);");
-
-            // Create PlaylistSongs table
-            statement.execute("CREATE TABLE IF NOT EXISTS PlaylistSongs (" +
-                              "playlist_id INTEGER NOT NULL, " +
-                              "song_id INTEGER NOT NULL, " +
-                              "FOREIGN KEY (playlist_id) REFERENCES Playlists(id), " +
-                              "FOREIGN KEY (song_id) REFERENCES Songs(id));");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -68,61 +57,6 @@ public class DatabaseManager {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
-
-    public void createPlaylist(String name) {
-        String sql = "INSERT INTO Playlists (name) VALUES (?);";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, name);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void addSongToPlaylist(String songPath, String playlistName) {
-        String sql = "INSERT INTO PlaylistSongs (playlist_id, song_id) " +
-                     "SELECT p.id, s.id FROM Playlists p, Songs s " +
-                     "WHERE p.name = ? AND s.path = ?;";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playlistName);
-            pstmt.setString(2, songPath);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public List<String> getSongsInPlaylist(String playlistName) {
-        List<String> songs = new ArrayList<>();
-        String sql = "SELECT s.path FROM Songs s " +
-                     "JOIN PlaylistSongs ps ON s.id = ps.song_id " +
-                     "JOIN Playlists p ON ps.playlist_id = p.id " +
-                     "WHERE p.name = ?;";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playlistName);
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                songs.add(rs.getString("path"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return songs;
-    }
-
-    public List<String> getAllPlaylists() {
-        List<String> playlists = new ArrayList<>();
-        String sql = "SELECT name FROM Playlists;";
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                playlists.add(rs.getString("name"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return playlists;
     }
     
     public List<String> getAllSongs() {

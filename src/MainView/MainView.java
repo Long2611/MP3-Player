@@ -2,208 +2,133 @@ package MainView;
 
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
-import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
-import javafx.stage.DirectoryChooser;
 import javafx.util.Duration;
 
 import javax.swing.*;
-
-import MainView.Controller.MediaPlayerController;
-
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class MainView extends JFrame {
-    private final JButton playButton;
-    private final JButton nextButton;
-    private final JButton prevButton;
-    private final JButton changePlaylistButton;
-    private final JButton repeatButton;
-    private final JButton shuffleButton;
-
-    private final JLabel songLabel;
-    private final JSlider scrubBar;
-    private final JLabel currentTimeLabel;
-    private final JLabel totalTimeLabel;
+public class MainView {
+    private MainViewUI ui;
     private MediaPlayerController mediaPlayerController;
     private SimpleDateFormat timeFormat = new SimpleDateFormat("mm:ss");
-    private JList<String> playlist;
-    private DefaultListModel<String> playlistModel;
 
     public MainView() {
         // Initialize the JavaFX environment
         new JFXPanel();
+
+        // Initialize UI components
+        ui = new MainViewUI();
+
+        // Initialize MediaPlayerController
+        mediaPlayerController = new MediaPlayerController();
+
         // Initialize and start the timer for updating the scrub bar
         int delay = 100; // Update every second
         Timer timer = new Timer(delay, e -> updateScrubBar());
         timer.start();
 
-        // Swing components
-        playButton = new JButton("");
-        nextButton = new JButton("Next");
-        prevButton = new JButton("Previous");
-        changePlaylistButton = new JButton("Change Playlist");
-        repeatButton = new JButton("Repeat");
-        shuffleButton = new JButton("Shuffle");
-
-        songLabel = new JLabel("No song playing", SwingConstants.CENTER);
-        scrubBar = new JSlider();
-        currentTimeLabel = new JLabel("--:--");
-        totalTimeLabel = new JLabel("--:--");
-
-        // Initialize MediaPlayerController
-        mediaPlayerController = new MediaPlayerController();
-
-        // Initialize UI components
-        initUI();
-
         // Action listeners for buttons
-        playButton.addActionListener(this::playPause);
-        nextButton.addActionListener(e -> mediaPlayerController.playNextSong());
-        prevButton.addActionListener(e -> mediaPlayerController.playPreviousSong());
-        changePlaylistButton.addActionListener(this::changePlaylist);
-        repeatButton.addActionListener(e -> toggleRepeat());
-        shuffleButton.addActionListener(e -> toggleShuffle());
+        ui.setPlayButtonActionListener(e -> playPause());
+        ui.setNextButtonActionListener(e -> mediaPlayerController.playNextSong());
+        ui.setPrevButtonActionListener(e -> mediaPlayerController.playPreviousSong());
+        ui.setChangePlaylistButtonActionListener(this::changePlaylist);
+        ui.setRepeatButtonActionListener(e -> toggleRepeat());
+        ui.setShuffleButtonActionListener(e -> toggleShuffle());
 
-        scrubBar.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                if (mediaPlayerController.getPlaybackStatus() != MediaPlayer.Status.STOPPED && mediaPlayerController.getTotalDuration().greaterThan(Duration.ZERO)) {
-                    int mouseX = evt.getX();
-                    double scrubValue = (double) mouseX / (double) scrubBar.getWidth() * scrubBar.getMaximum();
-                    Duration seekTo = mediaPlayerController.getTotalDuration().multiply(scrubValue / 100.0);
-                    mediaPlayerController.seek(seekTo);
-                }
+        // Scrub bar mouse listener
+        ui.setScrubBarMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent evt) {
+                scrubBarClicked(evt);
             }
         });
 
-        playlist.addListSelectionListener(e -> {
+        // Playlist selection listener
+        ui.setPlaylistSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                int selectedSongIndex = playlist.getSelectedIndex();
-                if (selectedSongIndex >= 0) {
-                    mediaPlayerController.playSong(selectedSongIndex);
-                }
+                playSelectedSong();
             }
         });
-        
+
+        // Set song playback listener
         mediaPlayerController.setSongPlaybackListener(new MediaPlayerController.SongPlaybackListener() {
             @Override
             public void onSongChanged(String songName, Duration totalDuration) {
-                songLabel.setText(songName);
-                totalTimeLabel.setText(timeFormat.format(new Date((long) totalDuration.toMillis())));
+                ui.updateSongLabel(songName);
+                ui.updateTotalTimeLabel(timeFormat.format(new Date((long) totalDuration.toMillis())));
+                updatePlayPauseButton();
             }
         });
         
         try {
             int iconSize = 30;
-
-            ImageIcon playIcon = resizeImage("play.png", iconSize, iconSize);
-            playButton.setIcon(playIcon);
-
+            ImageIcon playIcon = resizeImage("pause.png", iconSize, iconSize);
+            ImageIcon pauseIcon = resizeImage("pause.png", iconSize, iconSize);
             ImageIcon nextIcon = resizeImage("next.png", iconSize, iconSize);
-            nextButton.setIcon(nextIcon);
-
             ImageIcon prevIcon = resizeImage("prev.png", iconSize, iconSize);
-            prevButton.setIcon(prevIcon);
-
             ImageIcon changePlaylistIcon = resizeImage("changePlaylist.png", iconSize, iconSize);
-            changePlaylistButton.setIcon(changePlaylistIcon);
-
             ImageIcon repeatIcon = resizeImage("repeat.png", iconSize, iconSize);
-            repeatButton.setIcon(repeatIcon);
-
             ImageIcon shuffleIcon = resizeImage("shuffle.png", iconSize, iconSize);
-            shuffleButton.setIcon(shuffleIcon);
+
+            // Update play button icon depending on the playback status
+            boolean isPlaying = mediaPlayerController.getPlaybackStatus() == MediaPlayer.Status.PLAYING;
+            ImageIcon playPauseIcon = isPlaying ? pauseIcon : playIcon;
+            ui.setButtonIcons(playPauseIcon, nextIcon, prevIcon, changePlaylistIcon, repeatIcon, shuffleIcon);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         updatePlaylistFromDatabase();
     }
-    
+
     private void toggleShuffle() {
         mediaPlayerController.toggleShuffleMode();
         if (mediaPlayerController.getCurrentMode() == MediaPlayerController.PlaybackMode.SHUFFLE) {
-            shuffleButton.setBackground(Color.BLUE);
-            shuffleButton.setForeground(Color.WHITE); // Set text color to white for better visibility
-            repeatButton.setBackground(null); // Reset repeat button color
-            repeatButton.setForeground(null); // Reset text color
+            ui.setShuffleButtonBackground(Color.BLUE);
+            ui.setShuffleButtonTextForeground(Color.WHITE);
+            ui.setRepeatButtonBackground(null);
+            ui.setRepeatButtonTextForeground(null);
         } else {
-            shuffleButton.setBackground(null);
-            shuffleButton.setForeground(null);
+            ui.setShuffleButtonBackground(null);
+            ui.setShuffleButtonTextForeground(null);
         }
     }
 
     private void toggleRepeat() {
         mediaPlayerController.toggleRepeatMode();
         if (mediaPlayerController.getCurrentMode() == MediaPlayerController.PlaybackMode.REPEAT) {
-            repeatButton.setBackground(Color.BLUE);
-            repeatButton.setForeground(Color.WHITE); // Set text color to white for better visibility
-            shuffleButton.setBackground(null); // Reset shuffle button color
-            shuffleButton.setForeground(null); // Reset text color
+            ui.setRepeatButtonBackground(Color.BLUE);
+            ui.setRepeatButtonTextForeground(Color.WHITE);
+            ui.setShuffleButtonBackground(null);
+            ui.setShuffleButtonTextForeground(null);
         } else {
-            repeatButton.setBackground(null);
-            repeatButton.setForeground(null);
+            ui.setRepeatButtonBackground(null);
+            ui.setRepeatButtonTextForeground(null);
         }
     }
 
-
-    private void initUI() {
-        // Set up the JFrame
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(600, 500);
-        setLayout(new BorderLayout(5, 5));
-
-        // Set up the UI components
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.add(currentTimeLabel, BorderLayout.WEST);
-        topPanel.add(scrubBar, BorderLayout.CENTER);
-        topPanel.add(totalTimeLabel, BorderLayout.EAST);
-
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.add(topPanel, BorderLayout.NORTH);
-        centerPanel.add(songLabel, BorderLayout.CENTER);
-
-        // Set up the UI layout for each button in the bottom panel
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        FlowLayout flowLayout = new FlowLayout(FlowLayout.CENTER);
-        bottomPanel.setLayout(flowLayout);
-        bottomPanel.add(playButton);
-        bottomPanel.add(nextButton);
-        bottomPanel.add(prevButton);
-        bottomPanel.add(changePlaylistButton);
-
-        JPanel bottomPanel2 = new JPanel(flowLayout);
-        FlowLayout flowLayout2 = new FlowLayout(FlowLayout.CENTER);
-        bottomPanel2.setLayout(flowLayout2);
-        bottomPanel2.add(repeatButton);
-        bottomPanel2.add(shuffleButton);
-
-        JPanel combinedBottomPanel = new JPanel(new BorderLayout());
-        combinedBottomPanel.add(bottomPanel, BorderLayout.NORTH);
-        combinedBottomPanel.add(bottomPanel2, BorderLayout.SOUTH);
-
-        // Initialize playlist components
-        playlistModel = new DefaultListModel<>();
-        playlist = new JList<>(playlistModel);
-        JScrollPane playlistScrollPane = new JScrollPane(playlist);
-
-        // Add components to the UI
-        add(playlistScrollPane, BorderLayout.CENTER);
-        add(centerPanel, BorderLayout.SOUTH);
-        add(combinedBottomPanel, BorderLayout.NORTH);
-    }
-
-    private void playPause(ActionEvent event) {
+    private void playPause() {
         mediaPlayerController.playPause();
         updatePlayPauseButton();
     }
-    
+
+    private void updatePlayPauseButton() {
+        // Update the play/pause button based on the MediaPlayer's status
+        boolean isPlaying = mediaPlayerController.getPlaybackStatus() == MediaPlayer.Status.PLAYING;
+        int iconSize = 30;
+        String iconPath = isPlaying ? "play.png" : "pause.png";
+        ImageIcon playPauseIcon = resizeImage(iconPath, iconSize, iconSize);
+        ui.updatePlayPauseButtonIcon(playPauseIcon);
+    }
+
     private ImageIcon resizeImage(String filePath, int width, int height) {
         try {
             ImageIcon originalIcon = new ImageIcon(getClass().getResource(filePath));
@@ -216,25 +141,72 @@ public class MainView extends JFrame {
         }
     }
 
-    private void updatePlayPauseButton() {
-        // Update the play/pause button based on the MediaPlayer's status
-        boolean isPlaying = mediaPlayerController.getPlaybackStatus() == MediaPlayer.Status.PLAYING;
-        updatePlayPauseIcon(isPlaying);
+    private void scrubBarClicked(MouseEvent evt) {
+        int mouseX = evt.getX();
+        double scrubValue = (double) mouseX / ui.getScrubBarWidth() * ui.getScrubBarMaximum();
+        Duration seekTo = mediaPlayerController.getTotalDuration().multiply(scrubValue / 100.0);
+        mediaPlayerController.seek(seekTo);
     }
 
+    private void playSelectedSong() {
+        int selectedSongIndex = ui.getPlaylistSelectedIndex();
+        if (selectedSongIndex >= 0) {
+            mediaPlayerController.playSong(selectedSongIndex);
+        }
+    }
 
-    private void updatePlayPauseIcon(boolean isPlaying) {
-        // Set the appropriate icon based on the playback status
-        try {
-            int iconSize = 30;
-            String iconPath = isPlaying ? "play.png" : "pause.png";
-            ImageIcon playPauseIcon = resizeImage(iconPath, iconSize, iconSize);
-            playButton.setIcon(playPauseIcon);
-        } catch (Exception e) {
-            e.printStackTrace();
+    private void updatePlaylistFromDatabase() {
+        DatabaseManager dbManager = DatabaseManager.getInstance();
+        List<String> songPaths = dbManager.getAllSongs();
+        List<File> songFiles = new ArrayList<>();
+
+        for (String path : songPaths) {
+            songFiles.add(new File(path));
+        }
+
+        mediaPlayerController.setSongFiles(songFiles);
+        ui.updatePlaylistModel(songFiles);
+    }
+
+    private void updateScrubBar() {
+        if (mediaPlayerController != null) {
+            Duration currentTime = mediaPlayerController.getCurrentTime();
+            Duration totalDuration = mediaPlayerController.getTotalDuration();
+
+            if (!totalDuration.equals(Duration.ZERO) && !totalDuration.isUnknown()) {
+                double progress = currentTime.toMillis() / totalDuration.toMillis();
+                ui.updateScrubBarValue((int) (progress * 100));
+                ui.updateCurrentTimeLabel(timeFormat.format(new Date((long) currentTime.toMillis())));
+            }
+        }
+    }
+
+    private void changePlaylist(ActionEvent event) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+        int result = fileChooser.showOpenDialog(null); // Use 'null' or pass a component from UI
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedDirectory = fileChooser.getSelectedFile();
+            updateSongDatabase(selectedDirectory);
         }
     }
     
+    private void updateSongDatabase(File selectedDirectory) {
+        if (selectedDirectory != null) {
+            List<File> files = collectMP3Files(selectedDirectory);
+            if (!files.isEmpty()) {
+                DatabaseManager dbManager = DatabaseManager.getInstance();
+                for (File file : files) {
+                    dbManager.addSong(file.getAbsolutePath());
+                }
+                updatePlaylistFromDatabase();
+            } else {
+                JOptionPane.showMessageDialog(null, "No MP3 files found in the selected directory.");
+            }
+        }
+    }
+
     private List<File> collectMP3Files(File directory) {
         List<File> mp3Files = new ArrayList<>();
         File[] files = directory.listFiles();
@@ -251,71 +223,8 @@ public class MainView extends JFrame {
 
         return mp3Files;
     }
-    
-    
-    private void changePlaylist(ActionEvent event) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedDirectory = fileChooser.getSelectedFile();
-            if (selectedDirectory != null) {
-                List<File> files = collectMP3Files(selectedDirectory);
-                if (!files.isEmpty()) {
-                    DatabaseManager dbManager = DatabaseManager.getInstance();
-                    for (File file : files) {
-                        dbManager.addSong(file.getAbsolutePath());
-                    }
-                    updatePlaylistFromDatabase();
-                } else {
-                    JOptionPane.showMessageDialog(this, "No MP3 files found in the selected directory.");
-                }
-            }
-        }
-    }
-
-
-
-    private void updatePlaylistFromDatabase() {
-        DatabaseManager dbManager = DatabaseManager.getInstance();
-        List<String> songPaths = dbManager.getAllSongs();
-        List<File> songFiles = new ArrayList<>();
-
-        for (String path : songPaths) {
-            songFiles.add(new File(path));
-        }
-
-        mediaPlayerController.setSongFiles(songFiles);
-        updatePlaylistUI(songFiles);
-    }
-
-
-    private void updatePlaylistUI(List<File> songFiles) {
-        playlistModel.clear();
-        for (File song : songFiles) {
-            playlistModel.addElement(song.getName().replace(".mp3", ""));
-        }
-    }
-    
-    private void updateScrubBar() {
-        if (mediaPlayerController != null) {
-            Duration currentTime = mediaPlayerController.getCurrentTime();
-            Duration totalDuration = mediaPlayerController.getTotalDuration();
-
-            if (!totalDuration.equals(Duration.ZERO) && !totalDuration.isUnknown()) {
-                double progress = currentTime.toMillis() / totalDuration.toMillis();
-                scrubBar.setValue((int) (progress * 100));
-                currentTimeLabel.setText(timeFormat.format(new Date((long) currentTime.toMillis())));
-            }
-        }
-    }
-
-
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new MainView().setVisible(true));
+        SwingUtilities.invokeLater(() -> new MainView().ui.setVisible(true)); // Adjusted to set visibility of UI
     }
-    
-    
 }
