@@ -20,5 +20,6 @@
 	<classpathentry kind="lib" path="C:/Users/brobb/Downloads/slf4j-api-2.0.9.jar"/>
 	<classpathentry kind="lib" path="C:/Users/brobb/Downloads/mockito-core-5.8.0.jar"/>
 	<classpathentry kind="lib" path="C:/Users/brobb/Downloads/junit-jupiter-api-5.10.1.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

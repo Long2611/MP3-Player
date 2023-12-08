@@ -14,21 +14,21 @@ public class DatabaseManager {
     private static DatabaseManager instance = null;
     private Connection connection;
 
-    private DatabaseManager() {
+    private DatabaseManager(String dbName) {
         try {
             // Load the SQLite JDBC driver (if necessary)
             Class.forName("org.sqlite.JDBC");
-            // Establish a connection to the database
-            connection = DriverManager.getConnection("jdbc:sqlite:MusicPlayer.db");
+            // Establish a connection to the database using the provided name
+            connection = DriverManager.getConnection("jdbc:sqlite:" + dbName);
             initializeDatabase();
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
         }
     }
 
-    public static DatabaseManager getInstance() {
+    public static DatabaseManager getInstance(String dbName) {
         if (instance == null) {
-            instance = new DatabaseManager();
+            instance = new DatabaseManager(dbName);
         }
         return instance;
     }
@@ -71,6 +71,15 @@ public class DatabaseManager {
             e.printStackTrace();
         }
         return songs;
+    }
+    
+    public void clearDatabase() {
+        try (Statement statement = connection.createStatement()) {
+            // Clear the Songs table
+            statement.execute("DELETE FROM Songs;");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
 }

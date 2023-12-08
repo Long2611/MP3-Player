@@ -156,7 +156,7 @@ public class MainView {
     }
 
     private void updatePlaylistFromDatabase() {
-        DatabaseManager dbManager = DatabaseManager.getInstance();
+        DatabaseManager dbManager = DatabaseManager.getInstance("MusicPlayer.db");
         List<String> songPaths = dbManager.getAllSongs();
         List<File> songFiles = new ArrayList<>();
 
@@ -196,7 +196,7 @@ public class MainView {
         if (selectedDirectory != null) {
             List<File> files = collectMP3Files(selectedDirectory);
             if (!files.isEmpty()) {
-                DatabaseManager dbManager = DatabaseManager.getInstance();
+                DatabaseManager dbManager = DatabaseManager.getInstance("MusicPlayer.db");
                 for (File file : files) {
                     dbManager.addSong(file.getAbsolutePath());
                 }
